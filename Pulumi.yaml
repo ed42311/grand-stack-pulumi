@@ -1,0 +1,3 @@
+name: graphqlNeo
+runtime: nodejs
+description: A simple AWS serverless TypeScript Pulumi program

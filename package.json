@@ -1,0 +1,27 @@
+{
+  "name": "grand-stack-pulumi",
+  "devDependencies": {
+    "@types/node": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.2.0",
+    "@typescript-eslint/parser": "^4.2.0",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.4.0",
+    "prettier": "^2.1.2",
+    "prettier-eslint": "^11.0.0",
+    "prettier-eslint-cli": "^5.0.0"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^2.0.0",
+    "@pulumi/aws": "^3.0.0",
+    "@pulumi/awsx": "^0.22.0"
+  },
+  "scripts": {
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx . --color",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write *.{ts,tsx}",
+    "validate": "run-s format lint"
+  }
+}
