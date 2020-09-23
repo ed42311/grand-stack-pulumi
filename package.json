@@ -9,6 +9,7 @@
     "eslint-plugin-prettier": "^3.1.4",
     "husky": "^4.3.0",
     "lint-staged": "^10.4.0",
+    "npm-run-all": "^4.1.5",
     "prettier": "^2.1.2",
     "prettier-eslint": "^11.0.0",
     "prettier-eslint-cli": "^5.0.0"
@@ -24,6 +25,6 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx . --color",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write *.{ts,tsx}",
-    "validate": "run-s format lint"
+    "validate": "run-s lint:fix format"
   }
 }
