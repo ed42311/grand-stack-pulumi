@@ -1,1 +1,5 @@
 # Pulumi
+
+### Dev
+
+`pulumi up`

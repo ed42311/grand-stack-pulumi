@@ -1,26 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>Hello Pulumi GRANDstack</title>
-    <link rel="shortcut icon" href="favicon.png" type="image/png">
-</head>
-<body>
-    <p>Hello, world!</p>
-    <p>Made with ❤️ using:
-    <ul>
+    <link rel="shortcut icon" href="favicon.png" type="image/png" />
+  </head>
+  <style>
+    :root {
+      --gray: #959595;
+    }
+    body {
+      background-color: var(--gray);
+      padding: 0;
+      margin: 0;
+    }
+    .flex {
+      display: flex;
+    }
+    .flex_column--center {
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .header {
+      background-color: darkgray;
+      width: 100%;
+    }
+  </style>
+  <body class="flex flex_column--center">
+    <div class="flex flex_column--center header">
+      <h1>Hello, world!</h1>
+      <h4>Made with ❤️ using:</h4>
+      <ul>
         <li>
-            <a href="https://pulumi.com">Pulumi</a>
+          <a href="https://pulumi.com">Pulumi</a>
         </li>
         <li>
-            <a href="https://grandstack.io/">GRANDstack</a>
+          <a href="https://grandstack.io/">GRANDstack</a>
         </li>
-    </ul>
+      </ul>
+    </div>
+
     <p>Served from: <span id="source"></span></p>
-</body>
-<script>
-    fetch("source").then(response => response.json()).then(json => {
-        document.getElementById("source").innerText = json.name;
-    });
-</script>
+    <p>Experiment -> <span id="flourse"></span></p>
+  </body>
+  <script>
+    fetch('source')
+      .then((response) => response.json())
+      .then((json) => {
+        document.getElementById('source').innerText = json.name
+      })
+    fetch('flourse')
+      .then((response) => response.json())
+      .then((json) => {
+        document.getElementById('flourse').innerText = json.nurm
+      })
+  </script>
 </html>
