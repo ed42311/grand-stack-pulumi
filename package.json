@@ -18,10 +18,9 @@
     "@pulumi/aws": "^3.0.0",
     "@pulumi/awsx": "^0.22.0",
     "@pulumi/pulumi": "^2.0.0",
-    "@pulumi/random": "^2.3.1",
-    "apollo-server-express": "^2.18.0",
     "apollo-server-lambda": "^2.18.0",
-    "graphql": "^15.3.0"
+    "graphql": "^15.3.0",
+    "neo4j-graphql-js": "^2.16.3"
   },
   "scripts": {
     "lint": "eslint --ext .js,.jsx,.ts,.tsx . --color",

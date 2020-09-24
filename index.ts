@@ -2,13 +2,12 @@
 import * as awsx from '@pulumi/awsx'
 import { dynamodb, sdk, lambda } from '@pulumi/aws'
 import { ApolloServer, gql } from 'apollo-server-lambda'
+import { makeAugmentedSchema } from 'neo4j-graphql-js'
 import {
   APIGatewayProxyEvent,
   Callback,
   APIGatewayProxyResult,
 } from 'aws-lambda'
-// apollo lambda server
-// graphql
 
 const AwsLambdaContextForPulumiContext = (
   pulumiContext: lambda.Context
