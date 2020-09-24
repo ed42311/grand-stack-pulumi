@@ -1,11 +1,37 @@
 // import * as pulumi from '@pulumi/pulumi'
 import * as awsx from '@pulumi/awsx'
-import * as aws from '@pulumi/aws'
-// import { ApolloServer, gql } from 'apollo-server-lambda'
+import { dynamodb, sdk, lambda } from '@pulumi/aws'
+import { ApolloServer, gql } from 'apollo-server-lambda'
+import {
+  APIGatewayProxyEvent,
+  Callback,
+  APIGatewayProxyResult,
+} from 'aws-lambda'
 // apollo lambda server
 // graphql
 
-const counterTable = new aws.dynamodb.Table('counterTable', {
+const AwsLambdaContextForPulumiContext = (
+  pulumiContext: lambda.Context
+): AWSLambda.Context => {
+  const lambdaContext: AWSLambda.Context = {
+    done() {
+      throw new Error('done is just a placeholder ')
+    },
+    fail() {
+      throw new Error('fail is just a placeholder ')
+    },
+    succeed() {
+      throw new Error('succeed is just a placeholder ')
+    },
+    ...pulumiContext,
+    getRemainingTimeInMillis: () =>
+      parseInt(pulumiContext.getRemainingTimeInMillis(), 10),
+    memoryLimitInMB: pulumiContext.memoryLimitInMB,
+  }
+  return lambdaContext
+}
+
+const counterTable = new dynamodb.Table('counterTable', {
   attributes: [
     {
       name: 'id',
@@ -16,34 +42,22 @@ const counterTable = new aws.dynamodb.Table('counterTable', {
   readCapacity: 5,
   writeCapacity: 5,
 })
-// $ curl -i -H 'Content-Type: application/json' -d '{"query": "query {hello}"}'
-// $ curl -i -H 'Content-Type: application/json' -H "Authorization: bearer myGithubAccessToken" -X POST -d '{"query": "query {repository(owner: \"wso2\", name: \"product-is\") {description}}"}' https://api.github.com/graphql
+// $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/graphql
 
 // https://github.com/fanout/apollo-serverless-demo
 // https://raw.githubusercontent.com/serverless/serverless-graphql/master/app-backend/rest-api/resolvers.js
-// Construct a schema, using GraphQL schema language
-// const typeDefs = gql`
-//   type Query {
-//     hello: String
-//   }
-// `
 
-// Provide resolver functions for your schema fields
-// const resolvers = {
-//   Query: {
-//     hello: () => 'Hello world!',
-//   },
-// }
-// https://kffo35vvi8.execute-api.us-west-2.amazonaws.com/stage/
-// {
-//   "data": {
-//     "hello" : {
-//     }
-//   }
+// const createHandler = async () => {
+//   return server.createHandler()
 // }
 
-// const server = new ApolloServer({ typeDefs, resolvers })
-// const httpLambdaFunction = new aws.lambda.CallbackFunction(
+// const graphql = (
+//   event: APIGatewayProxyEvent,
+//   context: PulumiContext,
+//   callback: Callback<APIGatewayProxyResult>
+// ) => {
+//   createHandler().then((handler) => handler(event, context, callback))
+// }
 
 // Create a public HTTP endpoint (using AWS APIGateway)
 const endpoint = new awsx.apigateway.API('hello', {
@@ -75,7 +89,7 @@ const endpoint = new awsx.apigateway.API('hello', {
           const route = event.pathParameters['route']
           console.log(`Getting count for '${route}'`)
 
-          const client = new aws.sdk.DynamoDB.DocumentClient()
+          const client = new sdk.DynamoDB.DocumentClient()
 
           // get previous value and increment
           // reference outer `counterTable` object
@@ -111,21 +125,28 @@ const endpoint = new awsx.apigateway.API('hello', {
     },
     {
       path: '/graphql',
-      method: 'GET',
-      eventHandler: async (event) => {
-        if (event.body) {
-          const body = JSON.parse(event.body)
-          console.log(body.query)
-        }
+      method: 'POST',
+      eventHandler: (
+        event: APIGatewayProxyEvent,
+        context: lambda.Context,
+        callback: Callback<APIGatewayProxyResult>
+      ) => {
+        const awsContext = AwsLambdaContextForPulumiContext(context)
+        // load from a schema file
+        const typeDefs = gql`
+          type Query {
+            hello: String
+          }
+        `
 
-        // const graphQLHandler = server.createHandler()
-        // console.log(graphQLHandler)
-
-        return {
-          statusCode: 200,
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ test: 'test' }),
+        // Provide resolver functions for your schema fields
+        const resolvers = {
+          Query: {
+            hello: () => 'Hello world!',
+          },
         }
+        const server = new ApolloServer({ typeDefs, resolvers })
+        server.createHandler()(event, awsContext, callback)
       },
     },
   ],
