@@ -48,6 +48,7 @@
     fetch('source')
       .then((response) => response.json())
       .then((json) => {
+        console.log(json)
         document.getElementById('source').innerText = json.name
       })
   </script>

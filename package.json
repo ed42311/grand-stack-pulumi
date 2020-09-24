@@ -20,11 +20,14 @@
     "@pulumi/pulumi": "^2.0.0",
     "apollo-server-lambda": "^2.18.0",
     "graphql": "^15.3.0",
-    "neo4j-graphql-js": "^2.16.3"
+    "neo4j-driver": "^4.1.2",
+    "neo4j-graphql-js": "^2.16.3",
+    "typescript": "^4.0.3"
   },
   "scripts": {
     "lint": "eslint --ext .js,.jsx,.ts,.tsx . --color",
     "lint:fix": "npm run lint -- --fix",
+    "type-check": "tsc --noEmit",
     "format": "prettier --write *.{ts,tsx}",
     "validate": "run-s lint:fix format"
   }

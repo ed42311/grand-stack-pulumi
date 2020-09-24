@@ -5,6 +5,8 @@
     "target": "es2016",
     "module": "commonjs",
     "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": false,
     "sourceMap": true,
     "experimentalDecorators": true,
     "pretty": true,
@@ -12,5 +14,6 @@
     "noImplicitReturns": true,
     "forceConsistentCasingInFileNames": true
   },
-  "files": ["global.d.ts", "index.ts"]
+  "include": ["index.d.ts", "index.ts"],
+  "exclude": ["node_modules"]
 }

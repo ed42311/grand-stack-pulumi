@@ -1,13 +1,19 @@
 // import * as pulumi from '@pulumi/pulumi'
 import * as awsx from '@pulumi/awsx'
-import { dynamodb, sdk, lambda } from '@pulumi/aws'
-import { ApolloServer, gql } from 'apollo-server-lambda'
-// import { makeAugmentedSchema } from 'neo4j-graphql-js'
+import { lambda } from '@pulumi/aws'
+import { ApolloServer } from 'apollo-server-lambda'
+import neo4j from 'neo4j-driver'
 import {
   APIGatewayProxyEvent,
   Callback,
   APIGatewayProxyResult,
 } from 'aws-lambda'
+
+// We need some types up in here
+// https://github.com/neo4j-graphql/neo4j-graphql-js/issues/275
+// eslint-disable-next-line
+const neo4jGraphqlJs = require('neo4j-graphql-js')
+const { makeAugmentedSchema } = neo4jGraphqlJs
 
 const AwsLambdaContextForPulumiContext = (
   pulumiContext: lambda.Context
@@ -30,34 +36,10 @@ const AwsLambdaContextForPulumiContext = (
   return lambdaContext
 }
 
-const counterTable = new dynamodb.Table('counterTable', {
-  attributes: [
-    {
-      name: 'id',
-      type: 'S',
-    },
-  ],
-  hashKey: 'id',
-  readCapacity: 5,
-  writeCapacity: 5,
-})
-// $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/graphql
-
 // https://github.com/fanout/apollo-serverless-demo
 // https://raw.githubusercontent.com/serverless/serverless-graphql/master/app-backend/rest-api/resolvers.js
 
-// const createHandler = async () => {
-//   return server.createHandler()
-// }
-
-// const graphql = (
-//   event: APIGatewayProxyEvent,
-//   context: PulumiContext,
-//   callback: Callback<APIGatewayProxyResult>
-// ) => {
-//   createHandler().then((handler) => handler(event, context, callback))
-// }
-
+// This is our whole stack, kinda cool
 // Create a public HTTP endpoint (using AWS APIGateway)
 const endpoint = new awsx.apigateway.API('hello', {
   routes: [
@@ -81,48 +63,6 @@ const endpoint = new awsx.apigateway.API('hello', {
       },
     },
     {
-      path: '/count/{route+}',
-      method: 'GET',
-      eventHandler: async (event) => {
-        if (event.pathParameters) {
-          const route = event.pathParameters['route']
-          console.log(`Getting count for '${route}'`)
-
-          const client = new sdk.DynamoDB.DocumentClient()
-
-          // get previous value and increment
-          // reference outer `counterTable` object
-          const tableData = await client
-            .get({
-              TableName: counterTable.name.get(),
-              Key: { id: route },
-              ConsistentRead: true,
-            })
-            .promise()
-
-          const value = tableData.Item
-          let count = (value && value.count) || 0
-
-          await client
-            .put({
-              TableName: counterTable.name.get(),
-              Item: { id: route, count: ++count },
-            })
-            .promise()
-
-          console.log(`Got count ${count} for '${route}'`)
-          return {
-            statusCode: 200,
-            body: JSON.stringify({ route, count }),
-          }
-        }
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ err: 'no route' }),
-        }
-      },
-    },
-    {
       path: '/graphql',
       method: 'POST',
       eventHandler: (
@@ -130,22 +70,43 @@ const endpoint = new awsx.apigateway.API('hello', {
         context: lambda.Context,
         callback: Callback<APIGatewayProxyResult>
       ) => {
+        // This is our backend, it holds our schema
+        // Our Apollo instance and our connection credentials to our sandbox
         const awsContext = AwsLambdaContextForPulumiContext(context)
         // load from a schema file
-        const typeDefs = gql`
-          type Query {
-            hello: String
-          }
-        `
-        const resolvers = {
-          Query: {
-            hello: () => 'Hello world!',
-          },
-        }
+        // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/graphql
+        // $ curl -d '{"query": "Movie(title: \"Cloud Atlas\") {title}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/graphql
+        const typeDefs = `
+type Movie {
+  movieId: ID!
+  title: String
+  year: Int
+  plot: String
+  poster: String
+  imdbRating: Float
+  similar(first: Int = 3, offset: Int = 0): [Movie] @cypher(statement: "MATCH (this)-[:IN_GENRE]->(:Genre)<-[:IN_GENRE]-(o:Movie) RETURN o")
+  degree: Int @cypher(statement: "RETURN SIZE((this)-->())")
+  actors(first: Int = 3, offset: Int = 0): [Actor] @relation(name: "ACTED_IN", direction:"IN")
+}
+
+type Actor {
+  id: ID!
+  name: String
+  movies: [Movie]
+}
+
+type Query {
+  Movie(id: ID, title: String, year: Int, imdbRating: Float, first: Int, offset: Int): [Movie]
+}
+`
+        const schema = makeAugmentedSchema({ typeDefs })
+        const driver = neo4j.driver(
+          'bolt://100.26.252.113:33279',
+          neo4j.auth.basic('neo4j', 'zips-toe-lapse')
+        )
         const server = new ApolloServer({
-          typeDefs,
-          resolvers,
-          playground: true,
+          schema,
+          context: { driver },
         })
         server.createHandler()(event, awsContext, callback)
       },
