@@ -138,14 +138,16 @@ const endpoint = new awsx.apigateway.API('hello', {
             hello: String
           }
         `
-
-        // Provide resolver functions for your schema fields
         const resolvers = {
           Query: {
             hello: () => 'Hello world!',
           },
         }
-        const server = new ApolloServer({ typeDefs, resolvers })
+        const server = new ApolloServer({
+          typeDefs,
+          resolvers,
+          playground: true,
+        })
         server.createHandler()(event, awsContext, callback)
       },
     },
