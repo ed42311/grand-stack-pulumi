@@ -8,14 +8,13 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda'
 
-import { ApolloServer, gql } from 'apollo-server-lambda'
-// import { ApolloServer } from 'apollo-server-lambda'
+import { ApolloServer } from 'apollo-server-lambda'
 
 import neo4j from 'neo4j-driver'
 
 // eslint-disable-next-line
-// const neo4jGraphqlJs = require('neo4j-graphql-js')
-// const { makeAugmentedSchema } = neo4jGraphqlJs
+const neo4jGraphqlJs = require('neo4j-graphql-js')
+const { makeAugmentedSchema } = neo4jGraphqlJs
 
 const AwsLambdaContextForPulumiContext = (
   pulumiContext: lambda.Context
@@ -51,59 +50,31 @@ const endpoint = new awsx.apigateway.API('hello', {
         callback: Callback<APIGatewayProxyResult>
       ) => {
         const awsContext = AwsLambdaContextForPulumiContext(context)
-        // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/
-        // $ curl -d '{"query": "Movie(title: \"Cloud Atlas\") {title}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/
-        const typeDefs = gql`
-          type Query {
-            numberSix: Int!
-            numberTwo: Int!
-          }
+        const typeDefs = `
+type Person {
+  name: String
+}
         `
-        // const schema = makeAugmentedSchema({ typeDefs })
+        const schema = makeAugmentedSchema({ typeDefs })
         const driver = neo4j.driver(
           'bolt://52.86.81.2:33027',
           neo4j.auth.basic('neo4j', 'crews-bridges-holddowns')
         )
-
-        const resolvers = {
-          Query: {
-            numberSix(object: any, params: any, context: any, info: any) {
-              console.log(object)
-              console.log(params)
-              console.log(context)
-              console.log(info)
-              return 6
-            },
-            numberTwo(_object: any, _params: any, context: any, _info: any) {
-              console.log(context.driver.session({}))
-              return 2
-            },
-          },
-        }
         const server = new ApolloServer({
-          typeDefs,
-          resolvers,
-          // introspection: true,
+          schema,
           playground: {
             endpoint: '/dev/graphql',
           },
-          context: (what: any) => {
-            console.log(what)
-            return {
-              driver,
-            }
-          },
+          context: { driver },
         })
 
         if (event.httpMethod === 'GET') {
-          console.log('GET PLAYGROUND')
           server.createHandler()(
             { ...event, path: event.requestContext.path || event.path },
             awsContext,
             callback
           )
         } else {
-          console.log('NOT GET')
           server.createHandler()(event, awsContext, callback)
         }
       },
