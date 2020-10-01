@@ -8,13 +8,14 @@ import {
   APIGatewayProxyResult,
 } from 'aws-lambda'
 
-import { ApolloServer } from 'apollo-server-lambda'
+import { ApolloServer, gql } from 'apollo-server-lambda'
+// import { ApolloServer } from 'apollo-server-lambda'
 
 import neo4j from 'neo4j-driver'
 
 // eslint-disable-next-line
-const neo4jGraphqlJs = require('neo4j-graphql-js')
-const { makeAugmentedSchema } = neo4jGraphqlJs
+// const neo4jGraphqlJs = require('neo4j-graphql-js')
+// const { makeAugmentedSchema } = neo4jGraphqlJs
 
 const AwsLambdaContextForPulumiContext = (
   pulumiContext: lambda.Context
@@ -52,53 +53,59 @@ const endpoint = new awsx.apigateway.API('hello', {
         const awsContext = AwsLambdaContextForPulumiContext(context)
         // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/
         // $ curl -d '{"query": "Movie(title: \"Cloud Atlas\") {title}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/
-        const typeDefs = `
-type Movie {
-  movieId: ID!
-  title: String
-  year: Int
-  plot: String
-  poster: String
-  imdbRating: Float
-  similar(first: Int = 3, offset: Int = 0): [Movie] @cypher(statement: "MATCH (this)-[:IN_GENRE]->(:Genre)<-[:IN_GENRE]-(o:Movie) RETURN o")
-  degree: Int @cypher(statement: "RETURN SIZE((this)-->())")
-  actors(first: Int = 3, offset: Int = 0): [Actor] @relation(name: "ACTED_IN", direction:"IN")
-}
-
-type Actor {
-  id: ID!
-  name: String
-  movies: [Movie]
-}
-
-type Query {
-  Movie(id: ID, title: String, year: Int, imdbRating: Float, first: Int, offset: Int): [Movie]
-}
-`
-        const schema = makeAugmentedSchema({ typeDefs })
+        const typeDefs = gql`
+          type Query {
+            numberSix: Int!
+            numberTwo: Int!
+          }
+        `
+        // const schema = makeAugmentedSchema({ typeDefs })
         const driver = neo4j.driver(
-          'bolt://54.146.86.84:33082',
-          neo4j.auth.basic('neo4j', 'waves-raise-talks')
+          'bolt://52.86.81.2:33027',
+          neo4j.auth.basic('neo4j', 'crews-bridges-holddowns')
         )
+
+        const resolvers = {
+          Query: {
+            numberSix(object: any, params: any, context: any, info: any) {
+              console.log(object)
+              console.log(params)
+              console.log(context)
+              console.log(info)
+              return 6
+            },
+            numberTwo(_object: any, _params: any, context: any, _info: any) {
+              console.log(context.driver.session({}))
+              return 2
+            },
+          },
+        }
         const server = new ApolloServer({
-          schema,
-          introspection: true,
+          typeDefs,
+          resolvers,
+          // introspection: true,
           playground: {
             endpoint: '/dev/graphql',
           },
-          context: { driver },
+          context: (what: any) => {
+            console.log(what)
+            return {
+              driver,
+            }
+          },
         })
 
         if (event.httpMethod === 'GET') {
+          console.log('GET PLAYGROUND')
           server.createHandler()(
             { ...event, path: event.requestContext.path || event.path },
             awsContext,
             callback
           )
         } else {
+          console.log('NOT GET')
           server.createHandler()(event, awsContext, callback)
         }
-        server.createHandler()(event, awsContext, callback)
       },
     },
   ],

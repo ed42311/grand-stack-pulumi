@@ -1,6 +1,10 @@
 # Pulumi
 
-### Dev
+## Stack
+
+AWS -
+
+## Dev
 
 `pulumi up`
 
