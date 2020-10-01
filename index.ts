@@ -1,21 +1,20 @@
 // import * as pulumi from '@pulumi/pulumi'
+
+import * as awsx from '@pulumi/awsx'
+import { lambda } from '@pulumi/aws'
 import {
   APIGatewayProxyEvent,
   Callback,
   APIGatewayProxyResult,
 } from 'aws-lambda'
-import * as awsx from '@pulumi/awsx'
-import { lambda } from '@pulumi/aws'
-import { ApolloServer, gql } from 'apollo-server-lambda'
-// import neo4j from 'neo4j-driver'
 
-// // eslint-disable-next-line
-// const neo4jGraphqlJs = require('neo4j-graphql-js')
+import { ApolloServer } from 'apollo-server-lambda'
 
-// const { makeAugmentedSchema } = neo4jGraphqlJs
+import neo4j from 'neo4j-driver'
 
-// We need some types up in here
-// https://github.com/neo4j-graphql/neo4j-graphql-js/issues/275
+// eslint-disable-next-line
+const neo4jGraphqlJs = require('neo4j-graphql-js')
+const { makeAugmentedSchema } = neo4jGraphqlJs
 
 const AwsLambdaContextForPulumiContext = (
   pulumiContext: lambda.Context
@@ -50,31 +49,46 @@ const endpoint = new awsx.apigateway.API('hello', {
         context: lambda.Context,
         callback: Callback<APIGatewayProxyResult>
       ) => {
-        // This is our backend, it holds our schema
-        // Our Apollo instance and our connection credentials to our sandbox
         const awsContext = AwsLambdaContextForPulumiContext(context)
         // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/
-        // $ curl -d '{"query": "{query{Movie(title: \"Cloud Atlas\") {title}}}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/graphql
+        // $ curl -d '{"query": "Movie(title: \"Cloud Atlas\") {title}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/
+        const typeDefs = `
+type Movie {
+  movieId: ID!
+  title: String
+  year: Int
+  plot: String
+  poster: String
+  imdbRating: Float
+  similar(first: Int = 3, offset: Int = 0): [Movie] @cypher(statement: "MATCH (this)-[:IN_GENRE]->(:Genre)<-[:IN_GENRE]-(o:Movie) RETURN o")
+  degree: Int @cypher(statement: "RETURN SIZE((this)-->())")
+  actors(first: Int = 3, offset: Int = 0): [Actor] @relation(name: "ACTED_IN", direction:"IN")
+}
 
-        const typeDefs = gql`
-          type Query {
-            hello: String
-          }
-        `
+type Actor {
+  id: ID!
+  name: String
+  movies: [Movie]
+}
 
-        const resolvers = {
-          Query: {
-            hello: () => 'Hello world!',
-          },
-        }
+type Query {
+  Movie(id: ID, title: String, year: Int, imdbRating: Float, first: Int, offset: Int): [Movie]
+}
+`
+        const schema = makeAugmentedSchema({ typeDefs })
+        const driver = neo4j.driver(
+          'bolt://54.146.86.84:33082',
+          neo4j.auth.basic('neo4j', 'waves-raise-talks')
+        )
         const server = new ApolloServer({
-          typeDefs,
-          resolvers,
+          schema,
           introspection: true,
           playground: {
             endpoint: '/dev/graphql',
           },
+          context: { driver },
         })
+
         if (event.httpMethod === 'GET') {
           server.createHandler()(
             { ...event, path: event.requestContext.path || event.path },
