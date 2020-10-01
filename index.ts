@@ -53,7 +53,7 @@ const endpoint = new awsx.apigateway.API('hello', {
         // This is our backend, it holds our schema
         // Our Apollo instance and our connection credentials to our sandbox
         const awsContext = AwsLambdaContextForPulumiContext(context)
-        // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/graphql
+        // $ curl -d '{"query": "query {hello}"}' $(pulumi stack output endpoint)/
         // $ curl -d '{"query": "{query{Movie(title: \"Cloud Atlas\") {title}}}"}' https://qtta34wlsg.execute-api.us-west-2.amazonaws.com/stage/graphql
 
         const typeDefs = gql`
